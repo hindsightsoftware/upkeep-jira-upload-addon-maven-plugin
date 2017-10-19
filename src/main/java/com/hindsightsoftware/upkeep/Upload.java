@@ -29,6 +29,9 @@ public class Upload extends AbstractMojo {
     @Parameter( property = "jira.addon.upload.url", defaultValue = "" )
     private String baseUrl;
 
+    @Parameter( property = "jira.addon.upload.url.file", defaultValue = "" )
+    private File baseUrlFile;
+
     @Parameter( property = "jira.addon.file", defaultValue = "" )
     private File addonFile;
 
@@ -62,20 +65,21 @@ public class Upload extends AbstractMojo {
     public void execute() throws MojoExecutionException {
         if(skip)return;
 
-        if(baseUrl.indexOf("http://") != 0 && baseUrl.indexOf("https://") != 0){
-            if(baseUrl.indexOf("http://") != 0){
+        try {
+            // If no license provided in a text form but is provided by file...
+            if(baseUrlFile != null){
+                log.info("Reading base URL file: " + baseUrlFile.getAbsolutePath());
+                baseUrl = fileToString(baseUrlFile);
+            }
+
+            if(baseUrl.indexOf("http://") != 0 && baseUrl.indexOf("https://") != 0){
                 baseUrl = "http://" + baseUrl;
             }
-            else if(baseUrl.indexOf("https://") != 0){
-                baseUrl = "https://" + baseUrl;
-            }
-        }
 
-        log.info("JIRA base url: " + baseUrl);
-        log.info("JIRA addon key: " + addonKey);
-        log.info("JIRA addon file: " + addonFile.getAbsolutePath());
+            log.info("JIRA base url: " + baseUrl);
+            log.info("JIRA addon key: " + addonKey);
+            log.info("JIRA addon file: " + addonFile.getAbsolutePath());
 
-        try {
             // Do login (get session cookie)
             Http.Response response = Http.POST(baseUrl + "/rest/auth/1/session")
                     .withHeader("Content-Type", "application/json")
@@ -206,13 +210,9 @@ public class Upload extends AbstractMojo {
             }
 
             // If no license provided in a text form but is provided by file...
-            if((addonLicense == null || addonLicense.length() == 0) && addonLicenseFile != null){
+            if(addonLicenseFile != null){
                 log.info("Reading license file: " + addonLicenseFile.getAbsolutePath());
-                FileInputStream fileInputStream = new FileInputStream(addonLicenseFile);
-                byte[] buffer = new byte[fileInputStream.available()];
-                int length = fileInputStream.read(buffer);
-                fileInputStream.close();
-                addonLicense = new String(buffer, 0, length, Charsets.UTF_8);
+                addonLicense = fileToString(addonLicenseFile);
             }
 
             // Upload addon license if one provided
@@ -259,5 +259,13 @@ public class Upload extends AbstractMojo {
             e.printStackTrace();
             throw new MojoExecutionException("Something went wrong while uploading addon: " + e.getMessage());
         }
+    }
+
+    private static String fileToString(File file) throws IOException {
+        FileInputStream fileInputStream = new FileInputStream(file);
+        byte[] buffer = new byte[fileInputStream.available()];
+        int length = fileInputStream.read(buffer);
+        fileInputStream.close();
+        return new String(buffer, 0, length, Charsets.UTF_8);
     }
 }
