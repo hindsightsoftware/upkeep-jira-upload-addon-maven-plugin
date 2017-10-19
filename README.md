@@ -9,10 +9,10 @@ Maven plugin for uploading addon into JIRA Server and updating addon license
   the *jira.addon.upload.url* is ignored and the URL from file is used.
 * **jira.addon.file** - Path to addon file (the OBR file).
 * **jira.addon.key** - Addon key that needs to match addon file.
-* **jira.login.username** - Username that will be used to log in and upload the addon. The account associated with this
+* **jira.login.username** (default: admin) - Username that will be used to log in and upload the addon. The account associated with this
   username has to have websudo access (an access to JIRA system and addons).
-* **jira.login.password** - Password for the username.
-* **jira.max.wait** - Maximum wait time while waiting for addon to be installed.
+* **jira.login.password** (default: admin) - Password for the username.
+* **jira.max.wait** (default: 300) - Maximum wait time while waiting for addon to be installed in seconds.
 * **jira.addon.license** - License (in text form) for the addon. If no license is provided, no license is updated. You can
   use the timebomb license for testing which is valid for 3 hours: 
   <https://developer.atlassian.com/platform/marketplace/timebomb-licenses-for-testing-server-apps/>
