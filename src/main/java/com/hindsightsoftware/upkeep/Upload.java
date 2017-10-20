@@ -38,14 +38,17 @@ public class Upload extends AbstractMojo {
     @Parameter( property = "jira.addon.key", defaultValue = "" )
     private String addonKey;
 
-    @Parameter( property = "jira.login.username", defaultValue = "admin" )
+    @Parameter( property = "jira.addon.login.username", defaultValue = "admin" )
     private String username;
 
-    @Parameter( property = "jira.login.password", defaultValue = "admin" )
+    @Parameter( property = "jira.addon.login.password", defaultValue = "admin" )
     private String password;
 
     @Parameter( property = "jira.max.wait", defaultValue = "300" )
     private int maxWaitTime;
+
+    @Parameter( property = "jira.addon.license.enabled", defaultValue = "true" )
+    private boolean addonLicenseEnabled;
 
     @Parameter( property = "jira.addon.license", defaultValue = "" )
     private String addonLicense;
@@ -134,6 +137,9 @@ public class Upload extends AbstractMojo {
                 log.error("Expected return code 204!");
                 throw new MojoExecutionException("Plugin delete failed!");
             }
+            else if(response.getStatusCode() == 500){
+                throw new MojoExecutionException("Http error 500! Did you forget to add \"-key\" suffix into addon key?");
+            }
 
             // Get UPM token
             response = Http.GET(baseUrl + "/rest/plugins/1.0/")
@@ -209,50 +215,55 @@ public class Upload extends AbstractMojo {
                 throw new MojoExecutionException("Addon failed to install");
             }
 
+            // Should we upload license?
+            if(!addonLicenseEnabled){
+                log.info("Skipping updating addon license...");
+                return;
+            }
+
             // If no license provided in a text form but is provided by file...
             if(addonLicenseFile != null){
                 log.info("Reading license file: " + addonLicenseFile.getAbsolutePath());
                 addonLicense = fileToString(addonLicenseFile);
             }
 
-            // Upload addon license if one provided
-            if(addonLicense != null && addonLicense.length() > 0) {
-                // Check license
-                response = Http.GET(baseUrl + "/rest/plugins/1.0/" + addonKey + "/license")
-                        .withHeader("Accept", "*/*")
-                        .withHeader("Content-Type", "application/vnd.atl.plugins+json")
-                        .withHeader("Cookie", webSudoCookie)
-                        .withBody("{\"rawLicense\":\"" + addonLicense + "\"}")
-                        .send();
-                log.info("GET \"" + baseUrl + "/rest/plugins/1.0/" + addonKey + "/license\" returned " + response.getStatusCode());
+            // Upload addon license phase..
 
-                jsonObject = (JSONObject) new JSONParser().parse(response.getContentToString());
-                boolean hasLicense = jsonObject.containsKey("rawLicense");
+            // Check license
+            response = Http.GET(baseUrl + "/rest/plugins/1.0/" + addonKey + "/license")
+                    .withHeader("Accept", "*/*")
+                    .withHeader("Content-Type", "application/vnd.atl.plugins+json")
+                    .withHeader("Cookie", webSudoCookie)
+                    .withBody("{\"rawLicense\":\"" + addonLicense + "\"}")
+                    .send();
+            log.info("GET \"" + baseUrl + "/rest/plugins/1.0/" + addonKey + "/license\" returned " + response.getStatusCode());
 
-                String licenseUpdateBody;
-                if (hasLicense) {
-                    jsonObject.put("rawLicense", addonLicense);
-                    licenseUpdateBody = jsonObject.toJSONString();
-                } else {
-                    licenseUpdateBody = "{\"rawLicense\":\"" + addonLicense + "\"}";
-                }
+            jsonObject = (JSONObject) new JSONParser().parse(response.getContentToString());
+            boolean hasLicense = jsonObject.containsKey("rawLicense");
 
-                // Upload addon license
-                response = Http.PUT(baseUrl + "/rest/plugins/1.0/" + addonKey + "/license")
-                        .withHeader("Accept", "*/*")
-                        .withHeader("Content-Type", "application/vnd.atl.plugins+json")
-                        .withHeader("Cookie", webSudoCookie)
-                        .withBody(licenseUpdateBody)
-                        .send();
-                log.info("PUT \"" + baseUrl + "/rest/plugins/1.0/" + addonKey + "/license\" returned " + response.getStatusCode());
+            String licenseUpdateBody;
+            if (hasLicense) {
+                jsonObject.put("rawLicense", addonLicense);
+                licenseUpdateBody = jsonObject.toJSONString();
+            } else {
+                licenseUpdateBody = "{\"rawLicense\":\"" + addonLicense + "\"}";
+            }
 
-                if (response.getStatusCode() != 200) {
-                    log.error("Expeced return code 200! License not updated!");
-                    log.error(response.getContent());
-                    throw new MojoExecutionException("License not updated!");
-                } else {
-                    log.info("License updated!");
-                }
+            // Upload addon license
+            response = Http.PUT(baseUrl + "/rest/plugins/1.0/" + addonKey + "/license")
+                    .withHeader("Accept", "*/*")
+                    .withHeader("Content-Type", "application/vnd.atl.plugins+json")
+                    .withHeader("Cookie", webSudoCookie)
+                    .withBody(licenseUpdateBody)
+                    .send();
+            log.info("PUT \"" + baseUrl + "/rest/plugins/1.0/" + addonKey + "/license\" returned " + response.getStatusCode());
+
+            if (response.getStatusCode() != 200) {
+                log.error("Expeced return code 200! License not updated!");
+                log.error(response.getContentToString());
+                throw new MojoExecutionException("License not updated!");
+            } else {
+                log.info("License updated!");
             }
 
         } catch (Exception e){
@@ -266,6 +277,6 @@ public class Upload extends AbstractMojo {
         byte[] buffer = new byte[fileInputStream.available()];
         int length = fileInputStream.read(buffer);
         fileInputStream.close();
-        return new String(buffer, 0, length, Charsets.UTF_8);
+        return new String(buffer, 0, length, Charsets.UTF_8).replaceAll("\n","");
     }
 }
