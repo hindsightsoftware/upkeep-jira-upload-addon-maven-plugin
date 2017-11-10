@@ -98,6 +98,10 @@ public class Upload extends AbstractMojo {
             JSONObject jsonObject = (JSONObject)new JSONParser().parse(response.getContent());
             String sessionName = (String)((JSONObject)jsonObject.get("session")).get("name");
             String sessionValue = (String)((JSONObject)jsonObject.get("session")).get("value");
+            String cookie = sessionName + "=" + sessionValue;
+            for(String header : response.getHeader("Set-Cookie")){
+                cookie += "; " + header;
+            }
 
             log.info("Got session name: " + sessionName);
             log.info("Got session value: " + sessionValue);
@@ -106,8 +110,12 @@ public class Upload extends AbstractMojo {
             response = Http.POST(baseUrl + "/secure/admin/WebSudoAuthenticate.jspa")
                     .withHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
                     .withHeader("Content-Type", "application/x-www-form-urlencoded")
-                    .withHeader("Cookie", sessionName + "=" + sessionValue)
-                    .withForm(Arrays.asList(new BasicNameValuePair("webSudoPassword", password)))
+                    .withHeader("Cookie", cookie)
+                    .withForm(Arrays.asList(
+                            new BasicNameValuePair("webSudoPassword", password),
+                            new BasicNameValuePair("webSudoDestination", "/plugins/servlet/upm/marketplace"),
+                            new BasicNameValuePair("webSudoIsPost", "false")
+                    ))
                     .send();
 
             log.info("POST \"" + baseUrl + "/secure/admin/WebSudoAuthenticate.jspa\" returned " + response.getStatusCode());
