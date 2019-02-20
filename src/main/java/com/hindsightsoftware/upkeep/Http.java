@@ -4,6 +4,7 @@ import com.sun.java.swing.plaf.windows.WindowsTreeUI;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.HeaderElement;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
@@ -49,6 +50,27 @@ public class Http {
 
         public String getContentToString() throws IOException {
             return EntityUtils.toString(entity);
+        }
+
+        public File getFile() throws IOException {
+            Header header = response.getLastHeader("Content-Disposition");
+            String filename = "app.obr";
+            if (header != null) {
+                HeaderElement[] elements = header.getElements();
+                for (HeaderElement element : elements) {
+                    if (element.getName().equalsIgnoreCase("attachment")) {
+                        NameValuePair nmv = element.getParameterByName("filename");
+                        if (nmv != null) {
+                            filename = nmv.getValue();
+                        }
+                    }
+                }
+            }
+
+            File file = new File(filename);
+            FileOutputStream fos = new FileOutputStream(file);
+            entity.writeTo(fos);
+            return file;
         }
 
         public String getContent() throws IOException {

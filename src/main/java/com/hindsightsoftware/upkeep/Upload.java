@@ -26,34 +26,45 @@ import java.util.regex.Pattern;
 
 @Mojo( name = "upload", defaultPhase = LifecyclePhase.PRE_INTEGRATION_TEST )
 public class Upload extends AbstractMojo {
-    @Parameter( property = "jira.addon.upload.url", defaultValue = "" )
+    private static final String LICENSE_3H_EXPIRATION = 
+        "AAABCA0ODAoPeNpdj01PwkAURffzKyZxZ1IyUzARkllQ24gRaQMtGnaP8VEmtjPNfFT59yJVFyzfu\n" +
+        "bkn796Ux0Bz6SmbUM5nbDzj97RISxozHpMUnbSq88poUaLztFEStUN6MJZ2TaiVpu/YY2M6tI6sQ\n" +
+        "rtHmx8qd74EZ+TBIvyUU/AoYs7jiE0jzknWQxMuifA2IBlUbnQ7AulVjwN9AaU9atASs69O2dNFU\n" +
+        "4wXJLc1aOUGw9w34JwCTTZoe7RPqUgep2X0Vm0n0fNut4gSxl/Jcnj9nFb6Q5tP/Ueu3L+0PHW4g\n" +
+        "hZFmm2zZV5k6/95CbR7Y9bYGo/zGrV3Ir4jRbDyCA6vt34DO8p3SDAsAhQnJjLD5k9Fr3uaIzkXK\n" +
+        "f83o5vDdQIUe4XequNCC3D+9ht9ZYhNZFKmnhc=X02dh";
+
+    @Parameter( property = "jira-url", defaultValue = "http://localhost:8080" )
     private String baseUrl;
 
-    @Parameter( property = "jira.addon.upload.url.file", defaultValue = "" )
+    @Parameter( property = "jira-url-file", defaultValue = "" )
     private File baseUrlFile;
 
-    @Parameter( property = "jira.addon.file", defaultValue = "" )
+    @Parameter( property = "addon-file", defaultValue = "" )
     private File addonFile;
 
-    @Parameter( property = "jira.addon.key", defaultValue = "" )
+    @Parameter(property = "addon-url", defaultValue = "")
+    private String addonUrl;
+
+    @Parameter( property = "addon-key", defaultValue = "" )
     private String addonKey;
 
-    @Parameter( property = "jira.addon.login.username", defaultValue = "admin" )
+    @Parameter( property = "username", defaultValue = "admin" )
     private String username;
 
-    @Parameter( property = "jira.addon.login.password", defaultValue = "admin" )
+    @Parameter( property = "password", defaultValue = "admin" )
     private String password;
 
-    @Parameter( property = "jira.max.wait", defaultValue = "300" )
+    @Parameter( property = "wait", defaultValue = "300" )
     private int maxWaitTime;
 
-    @Parameter( property = "jira.addon.license.enabled", defaultValue = "true" )
-    private boolean addonLicenseEnabled;
+    @Parameter( property = "license-skip", defaultValue = "true" )
+    private boolean addonLicenseSkip;
 
-    @Parameter( property = "jira.addon.license", defaultValue = "" )
+    @Parameter( property = "license", defaultValue = LICENSE_3H_EXPIRATION )
     private String addonLicense;
 
-    @Parameter( property = "jira.addon.license.file", defaultValue = "" )
+    @Parameter( property = "license-file", defaultValue = "" )
     private File addonLicenseFile;
 
     @Parameter
@@ -77,6 +88,16 @@ public class Upload extends AbstractMojo {
 
             if(baseUrl.indexOf("http://") != 0 && baseUrl.indexOf("https://") != 0){
                 baseUrl = "http://" + baseUrl;
+            }
+            
+            if(addonUrl != null) {
+                log.info("Downloading addon from: " + addonUrl);
+                Http.Response response = Http.GET(addonUrl).timeout(30).send();
+                addonFile = response.getFile();
+            }
+
+            if (addonFile == null) {
+                throw new MojoExecutionException("Please provide addonFile or addonUrl");
             }
 
             log.info("JIRA base url: " + baseUrl);
@@ -224,7 +245,7 @@ public class Upload extends AbstractMojo {
             }
 
             // Should we upload license?
-            if(!addonLicenseEnabled){
+            if(!addonLicenseSkip){
                 log.info("Skipping updating addon license...");
                 return;
             }
@@ -234,6 +255,9 @@ public class Upload extends AbstractMojo {
                 log.info("Reading license file: " + addonLicenseFile.getAbsolutePath());
                 addonLicense = fileToString(addonLicenseFile);
             }
+
+            // Fix new line characters
+            addonLicense = addonLicense.replace("\n", "\\n");
 
             // Upload addon license phase..
 
@@ -249,12 +273,23 @@ public class Upload extends AbstractMojo {
             jsonObject = (JSONObject) new JSONParser().parse(response.getContentToString());
             boolean hasLicense = jsonObject.containsKey("rawLicense");
 
-            String licenseUpdateBody;
             if (hasLicense) {
-                jsonObject.put("rawLicense", addonLicense);
-                licenseUpdateBody = jsonObject.toJSONString();
-            } else {
-                licenseUpdateBody = "{\"rawLicense\":\"" + addonLicense + "\"}";
+                jsonObject.put("rawLicense", "");
+                String licenseUpdateBody = jsonObject.toJSONString();
+
+                // Remove addon license
+                response = Http.DELETE(baseUrl + "/rest/plugins/1.0/" + addonKey + "/license")
+                    .withHeader("Accept", "*/*")
+                    .withHeader("Content-Type", "application/vnd.atl.plugins+json")
+                    .withHeader("Cookie", webSudoCookie)
+                    .withBody(licenseUpdateBody)
+                    .send();
+
+                if (response.getStatusCode() != 200) {
+                    log.error("Expeced return code 200! License not removed!");
+                    log.error(response.getContentToString());
+                    throw new MojoExecutionException("License not removed!");
+                }
             }
 
             // Upload addon license
@@ -262,7 +297,7 @@ public class Upload extends AbstractMojo {
                     .withHeader("Accept", "*/*")
                     .withHeader("Content-Type", "application/vnd.atl.plugins+json")
                     .withHeader("Cookie", webSudoCookie)
-                    .withBody(licenseUpdateBody)
+                    .withBody("{\"rawLicense\":\"" + addonLicense + "\"}")
                     .send();
             log.info("PUT \"" + baseUrl + "/rest/plugins/1.0/" + addonKey + "/license\" returned " + response.getStatusCode());
 
