@@ -55,10 +55,10 @@ public class Upload extends AbstractMojo {
     @Parameter( property = "password", defaultValue = "admin" )
     private String password;
 
-    @Parameter( property = "wait", defaultValue = "300" )
+    @Parameter( property = "wait", defaultValue = "600" )
     private int maxWaitTime;
 
-    @Parameter( property = "license-skip", defaultValue = "true" )
+    @Parameter( property = "license-skip", defaultValue = "false" )
     private boolean addonLicenseSkip;
 
     @Parameter( property = "license", defaultValue = LICENSE_3H_EXPIRATION )
@@ -245,7 +245,7 @@ public class Upload extends AbstractMojo {
             }
 
             // Should we upload license?
-            if(!addonLicenseSkip){
+            if(addonLicenseSkip){
                 log.info("Skipping updating addon license...");
                 return;
             }
