@@ -27,12 +27,15 @@ import java.util.regex.Pattern;
 @Mojo( name = "upload", defaultPhase = LifecyclePhase.PRE_INTEGRATION_TEST )
 public class Upload extends AbstractMojo {
     private static final String LICENSE_3H_EXPIRATION = 
-        "AAABCA0ODAoPeNpdj01PwkAURffzKyZxZ1IyUzARkllQ24gRaQMtGnaP8VEmtjPNfFT59yJVFyzfu\n" +
-        "bkn796Ux0Bz6SmbUM5nbDzj97RISxozHpMUnbSq88poUaLztFEStUN6MJZ2TaiVpu/YY2M6tI6sQ\n" +
-        "rtHmx8qd74EZ+TBIvyUU/AoYs7jiE0jzknWQxMuifA2IBlUbnQ7AulVjwN9AaU9atASs69O2dNFU\n" +
-        "4wXJLc1aOUGw9w34JwCTTZoe7RPqUgep2X0Vm0n0fNut4gSxl/Jcnj9nFb6Q5tP/Ueu3L+0PHW4g\n" +
-        "hZFmm2zZV5k6/95CbR7Y9bYGo/zGrV3Ir4jRbDyCA6vt34DO8p3SDAsAhQnJjLD5k9Fr3uaIzkXK\n" +
-        "f83o5vDdQIUe4XequNCC3D+9ht9ZYhNZFKmnhc=X02dh";
+    "AAABrw0ODAoPeNp9kl9vmzAUxd/9KSztLZIJpKvURUJaA7SNViAKsD9d++DATeKN2JZ9yZZvPxeSZ\n" +
+    "a3UPfjFx/f4d479ruyApvxA/YD6k+nkYjq5ordpSSd+cEWybrcCk68rC8aGgU8iJZHXmPEdhI3mx\n" +
+    "gi7/cix5dYKLr1a7Yhuu42Q1ht57qDYQ4imA7LoTL3lFmKOED57M/+S+QG5FzVIC+VBQ28a5WmaL\n" +
+    "KP59f1JSn5rYQ793OLi7kSQpFy0byEUYPZg5nE4u/1Qsq/V5/fs08PDHZv5wRdSdCtbG6FRKDmwn\n" +
+    "YkL5AbBDNuj0SjLS3aTL9limcdVVM7zjFVF4oQwMuCIGro6UNwCPbLSRNaqAUO1UT+gRvp9i6gfp\n" +
+    "+PxRnkvGMftMMFgmHjyaKyoVEgbYdGIVYfgnIWlqGjdWVQ79wQecbElguSyfl2Mo4qWyXWZxGz27\n" +
+    "RnxjXKOqK6dSv6U6pckRZKFbrFL3ye52XApLO/biWEPrdIuTwkWTyFJn93pr9/y3KNTeATyb5Uxn\n" +
+    "CvvrY7p6VoZyrWmzekm+4/Lf/5GsudtN0CueeuY/gBrQ/OdMC0CFQCBdUokGEPDQeApZwmK47VRc\n" +
+    "7hv9wIUHoAl+9VxpP1eW0/g1SHbc5S4p5M=X02ko";
 
     @Parameter( property = "jira-url", defaultValue = "http://localhost:8080" )
     private String baseUrl;
